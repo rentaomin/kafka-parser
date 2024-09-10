@@ -24,5 +24,4 @@ public class ResponseHeaderParser implements KafkaProtocolParser<ResponseHeaderD
         return new ResponseHeaderData(new ByteBufferAccessor(buffer), headerVersion);
     }
 
-
 }

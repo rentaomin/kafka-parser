@@ -33,6 +33,13 @@ public class Message {
     private int responseLength;
 
     /**
+     *  请求 api 描述信息
+     */
+    private String requestApi;
+
+    private ProtocolMessage originData;
+
+    /**
      *  存储请求数据包 header 解析完成的内容
      */
     private RequestHeader requestHeader;
@@ -53,9 +60,24 @@ public class Message {
     private ApiMessage responseMessage;
 
     /**
+     *  标记请求响应数据包是否解析完成
+     */
+    private boolean parsedRequest;
+
+    /**
+     *  标记响应数据包，是否解析完成
+     */
+    private boolean parsedResponse;
+
+    /**
      *  标记一组 请求-响应 数据包解析完成
      */
-    private boolean parseComplete = false;
+    private boolean parseComplete ;
+
+    /**
+     *  标记是否为请求数据包，true 则为 请求数据解析内容，false 则为响应数据内容
+     */
+    private boolean isRequestData;
 
 
     public int getMessageSize() {
@@ -87,6 +109,13 @@ public class Message {
         this.responseLength = responseLength;
     }
 
+    public ProtocolMessage getOriginData() {
+        return originData;
+    }
+
+    public void setOriginData(ProtocolMessage originData) {
+        this.originData = originData;
+    }
 
     public RequestHeader getRequestHeader() {
         return requestHeader;
@@ -97,6 +126,13 @@ public class Message {
         this.requestHeader = requestHeader;
     }
 
+    public String getRequestApi() {
+        return requestApi;
+    }
+
+    public void setRequestApi(String requestApi) {
+        this.requestApi = requestApi;
+    }
 
     public ResponseHeaderData getResponseHeader() {
         return responseHeader;
@@ -128,6 +164,22 @@ public class Message {
     }
 
 
+    public boolean isParsedRequest() {
+        return parsedRequest;
+    }
+
+    public void setParsedRequest(boolean parsedRequest) {
+        this.parsedRequest = parsedRequest;
+    }
+
+    public boolean isParsedResponse() {
+        return parsedResponse;
+    }
+
+    public void setParsedResponse(boolean parsedResponse) {
+        this.parsedResponse = parsedResponse;
+    }
+
     /**
      *  判断当据包是否解析完成，只有一组请求包和响应包都解析完成才会认为解析完成
      * @return 返回 true 则解析完成， 反之 false
@@ -146,15 +198,30 @@ public class Message {
     }
 
 
+    public boolean isRequestData() {
+        return isRequestData;
+    }
+
+    public void setRequestData(boolean requestData) {
+        isRequestData = requestData;
+    }
+
     @Override
     public String toString() {
         return "Message{" +
                 "messageSize=" + messageSize +
                 ", requestLength=" + requestLength +
                 ", responseLength=" + responseLength +
+                ", requestApi='" + requestApi + '\'' +
+                ", originData=" + originData +
+                ", requestHeader=" + requestHeader +
+                ", responseHeader=" + responseHeader +
                 ", requestMessage=" + requestMessage +
                 ", responseMessage=" + responseMessage +
+                ", parsedRequest=" + parsedRequest +
+                ", parsedResponse=" + parsedResponse +
                 ", parseComplete=" + parseComplete +
+                ", isRequestData=" + isRequestData +
                 '}';
     }
 }

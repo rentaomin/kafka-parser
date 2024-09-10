@@ -1,20 +1,18 @@
 package cn.rtm.kafkaParser.protocol.test;
 
 
-import cn.rtm.kafkaParser.protocol.KafkaProtocolParserManager;
-import cn.rtm.kafkaParser.protocol.ProtocolMessage;
+import cn.rtm.kafkaParser.protocol.*;
+import cn.rtm.kafkaParser.protocol.consumer.KafkaDataParseExtractConsumer;
 import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
-import cn.rtm.kafkaParser.protocol.util.ByteUtils;
+import cn.rtm.kafkaParser.protocol.parser.DefaultProtocolContext;
+import cn.rtm.kafkaParser.protocol.parser.KafkaProtocolHandler;
+import cn.rtm.kafkaParser.protocol.parser.req.KafkaRequestParser;
+import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
+import cn.rtm.kafkaParser.protocol.parser.res.KafkaResponseParser;
+import cn.rtm.kafkaParser.protocol.parser.res.ResponseParser;
 import org.pcap4j.core.*;
-import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.Packet;
-import org.pcap4j.packet.TcpPacket;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -29,7 +27,6 @@ public class KafkaParser {
 
    static short LISTEN_PORT = 9094;
 
-    private KafkaProtocolParserManager kafkaProtocolParserManager = new KafkaProtocolParserManager();
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException, ProtocolParseException {
         // 获取所有网络接口
@@ -70,152 +67,25 @@ public class KafkaParser {
         }
     }
 
-    private Map<String, ByteBuffer> segmentBuffer = new ConcurrentHashMap<>();
+
+    private ProtocolHandler protocolHandler = getProtocolParseCoordinator();
 
     // 解析 MySQL 数据包
-    private void parsePacket(Packet packet) throws ProtocolParseException {
-        // 检查是否是TCP数据包
-        if (!packet.contains(TcpPacket.class)) {
-            return;
-        }
-        TcpPacket tcpPacket = packet.get(TcpPacket.class);
-
-        TcpPacket.TcpHeader header = tcpPacket.getHeader();
-        int srcPort = header.getSrcPort().valueAsInt();
-        int destPort = header.getDstPort().valueAsInt();
-
-        IpV4Packet ipV4Packet = (IpV4Packet)packet.getPayload();
-        String srcIp = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
-        String destIp = ipV4Packet.getHeader().getDstAddr().getHostAddress();
-        long sequenceNumber = header.getSequenceNumberAsLong();
-        long acknowledgmentNumber = header.getAcknowledgmentNumberAsLong();
-
-        if (!isTargetPacket(tcpPacket)) {
-            return;
-        }
-        Packet payloadPacket = tcpPacket.getPayload();
-        if (payloadPacket == null) {
-            return;
-        }
-
-        // 获取TCP载荷（即 Kafka 协议数据）
-        byte[] payload = payloadPacket.getRawData();
-        String packetKey = generatePacketKey(srcIp, srcPort, destIp, destPort, acknowledgmentNumber);
-
-        ByteBuffer previousPacket = segmentBuffer.get(packetKey);
-
-        ByteBuffer combinedPacket = ByteUtils.combineBuffers(previousPacket, ByteBuffer.wrap(payload));
-
-        // 检查是否为完整的数据包
-        if (isCompletePacket(combinedPacket, packetKey)) {
-            segmentBuffer.remove(packetKey); // 删除缓存的分片
-            ProtocolMessage message = new ProtocolMessage(srcIp,srcPort,
-                    destIp,destPort,sequenceNumber,acknowledgmentNumber,combinedPacket.array());
-            kafkaProtocolParserManager.parse(message); // 完整包解析
-        } else {
-            // 如果尚未接收完整，则缓存数据
-            segmentBuffer.put(packetKey, combinedPacket);
-        }
-
+    private void parsePacket(Packet packet) {
+        protocolHandler.handle(packet);
     }
 
-    private String generatePacketKey(String srcIp, int srcPort, String destIp, int destPort, long acknowledgmentNumber) {
-        return srcIp + ":" + srcPort + "-" + destIp + ":" + destPort + "-" + acknowledgmentNumber;
-    }
-
-    private boolean isCompletePacket(ByteBuffer buffer, String packetKey) {
-        int totalPacketLength = getTotalPacketLength(buffer);
-        int currentPacketLength = buffer.remaining();
-        return (currentPacketLength - 4) == totalPacketLength;
-    }
-
-    private int getTotalPacketLength(ByteBuffer buffer) {
-        return buffer.slice().getInt(0); // 获取包的总长度
-    }
-
-    private ProtocolMessage buildProtocolMessage(String srcIp, int srcPort, String destIp, int destPort, int sequenceNumber, int acknowledgmentNumber, byte[] rawData) {
-        ProtocolMessage message = new ProtocolMessage(srcIp,srcPort,
-                destIp,destPort,sequenceNumber,acknowledgmentNumber,rawData);
-        return message;
+    private ProtocolHandler getProtocolParseCoordinator() {
+        PacketCombiner<ProtocolMessage> packetCombiner = new TcpPacketCombiner();
+        ProtocolContext protocolContext = new DefaultProtocolContext();
+        RequestParser<ProtocolMessage, Message> requestParser = new KafkaRequestParser(protocolContext);
+        ResponseParser<ProtocolMessage, Message> responseParser = new KafkaResponseParser(protocolContext);
+        DataParseExtractConsumer<List<KafkaData>> kafkaDataParseExtractConsumer = new KafkaDataParseExtractConsumer();
+        ProtocolHandler protocolHandler = new KafkaProtocolHandler(packetCombiner,requestParser,
+                responseParser,kafkaDataParseExtractConsumer);
+        return protocolHandler;
     }
 
 
-    public static void log(Packet packet) {
-        TcpPacket tcpPacket = packet.get(TcpPacket.class);
 
-        TcpPacket.TcpHeader header = tcpPacket.getHeader();
-        int srcPort = header.getSrcPort().valueAsInt();
-        int destPort = header.getDstPort().valueAsInt();
-
-
-        IpV4Packet ipV4Packet = (IpV4Packet)packet.getPayload();
-        String srcIp = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
-        String destIp = ipV4Packet.getHeader().getDstAddr().getHostAddress();
-        int sequenceNumber = header.getSequenceNumber();
-        int acknowledgmentNumber = header.getAcknowledgmentNumber();
-        Packet payloadPacket = tcpPacket.getPayload();
-        if (payloadPacket == null) {
-            return;
-        }
-        // 获取TCP载荷（即 Kafka 协议数据）
-        byte[] payload = payloadPacket.getRawData();
-        ByteBuffer byteBuffer = ByteBuffer.wrap(payload);
-        int remaining = byteBuffer.remaining();
-        int realLength = byteBuffer.slice().getInt();
-
-        StringBuilder log = new StringBuilder();
-        log.append("-------- start ---------\n");
-        log.append("srcIp: "+srcIp);
-        log.append("\n");
-        log.append("srcPort: "+srcPort);
-        log.append("\n");
-        log.append("destIp: "+destIp);
-        log.append("\n");
-        log.append("destPort: "+destPort);
-        log.append("\n");
-        log.append("realLength: "+realLength);
-        log.append("\n");
-        log.append("payload length: "+remaining);
-        log.append("\n");
-        log.append("sequenceNumber: "+ sequenceNumber);
-        log.append("\n");
-        log.append("acknowledgmentNumber: "+acknowledgmentNumber);
-        log.append("\n");
-        log.append("-------- end ---------\n");
-        System.out.println(log);
-    }
-
-
-    public static boolean isTargetPacket(TcpPacket tcpPacket) {
-        return isRequestPacket(tcpPacket) || isResponsePacket(tcpPacket);
-    }
-
-    private static boolean isRequestPacket(TcpPacket tcpPacket) {
-        return tcpPacket.getHeader()
-                .getDstPort()
-                .value()
-                .equals(LISTEN_PORT);
-    }
-    private static boolean isResponsePacket(TcpPacket tcpPacket) {
-        return tcpPacket.getHeader()
-                .getSrcPort()
-                .value()
-                .equals(LISTEN_PORT);
-    }
-
-
-    /**
-     *  读取指定长度的字符串
-     * @param buffer 字节流
-     * @param length 读取的字节长度
-     * @return 返回该长度读取的字符串内容
-     */
-    public static String getString(ByteBuffer buffer, short length) {
-        if (length < 0 ) {
-            return "";
-        }
-        byte[] stringBytes = new byte[length];
-        buffer.get(stringBytes);
-        return new String(stringBytes, StandardCharsets.UTF_8);
-    }
 }

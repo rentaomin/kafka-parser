@@ -128,7 +128,6 @@ public class ProtocolMessage {
     }
 
 
-
     /**
      *  获取传输包总大小, 前四个字节代表实际传输包的大小，由于网卡传输限制，超过则会进行 tcp 分片传输，该字段标识完整数据包大小
      * @return 返回请求或响应数据包真实的大小
@@ -226,5 +225,8 @@ public class ProtocolMessage {
         return frame.toString();
     }
 
+    public String getRequestUrl() {
+        return this.srcIp + ":" +this.srcPort + " <-> " + this.destIp + ":" + this.destPort;
+    }
 
 }
