@@ -1,6 +1,6 @@
 package cn.rtm.kafkaParser.protocol.parser.res;
 
-import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
 import cn.rtm.kafkaParser.protocol.ProtocolContext;

@@ -4,42 +4,78 @@ import cn.rtm.kafkaParser.protocol.enums.ProtocolType;
 import java.util.Map;
 
 /**
- *  该类的作用主要是抽象 kafka 解析结果数据为公共的结构化数据内容
+ *  该类的作用主要是抽象 协议解析结果数据为公共的结构化数据内容
  *  与 数据库等协议解析结果一致，结构化存储
  */
-public class KafkaData{
+public class ProtocolParseData {
 
+    /**
+     *  数据包唯一标识
+     */
     private long id;
 
+    /**
+     *  请求的来源 ip 地址
+     */
     private String srcIp;
 
+    /**
+     * 请求来源 ip 地址端口
+     */
     private int srcPort;
 
+    /**
+     *  请求的目标 ip 地址
+     */
     private String destIp;
 
+    /**
+     *  请求目标 ip 地址端口
+     */
     private int destPort;
 
+    /**
+     *  数据请求客户端标识
+     */
     private String clientId;
 
+    /**
+     *  请求数据标识语义，如关系数据库为 sql, 非关系数据库为 api 描述
+     */
     private String requestApi;
 
     /**
-     *  协议类型
+     *  协议类型，{@link ProtocolType}
      */
     private String protocolType;
 
+    /**
+     *  存储请求数据提取的数据内容
+     */
     private String requestTopic;
 
+    /**
+     *  存储响应数据提取的数据内容
+     */
     private String responseRecord;
 
+    /**
+     * 响应数据包携带的响应体长度
+     */
     private int responseDataLength;
 
+    /**
+     *  提取数据执行时间
+     */
     private long executeTime;
 
+    /**
+     *  扩展字段，存储额外属性内容
+     */
     private Map<String,Object> extraValues;
 
 
-    private KafkaData(Builder builder) {
+    private ProtocolParseData(Builder builder) {
         this.id = builder.id;
         this.srcIp = builder.srcIp;
         this.srcPort = builder.srcPort;
@@ -150,8 +186,8 @@ public class KafkaData{
             return this;
         }
 
-        public KafkaData build() {
-            return new KafkaData(this);
+        public ProtocolParseData build() {
+            return new ProtocolParseData(this);
         }
     }
 
@@ -210,7 +246,7 @@ public class KafkaData{
 
     @Override
     public String toString() {
-        return "KafkaData{" +
+        return "ProtocolParseData{" +
                 "id=" + id +
                 ", srcIp='" + srcIp + '\'' +
                 ", srcPort=" + srcPort +

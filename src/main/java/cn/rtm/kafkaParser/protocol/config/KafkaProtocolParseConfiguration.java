@@ -3,8 +3,9 @@ package cn.rtm.kafkaParser.protocol.config;
 import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.consumer.KafkaDataParseExtractConsumer;
 import cn.rtm.kafkaParser.protocol.extractor.DataParseExtractSupplier;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.parser.DefaultProtocolContext;
-import cn.rtm.kafkaParser.protocol.KafkaProtocolHandler;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.parser.req.KafkaRequestParser;
 import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.KafkaResponseParser;
@@ -56,7 +57,7 @@ public class KafkaProtocolParseConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(KafkaDataParseExtractConsumer.class)
-    public DataParseExtractConsumer<List<KafkaData>> kafkaDataParseExtractConsumer() {
+    public DataParseExtractConsumer<List<ProtocolParseData>> kafkaDataParseExtractConsumer() {
         return new KafkaDataParseExtractConsumer();
     }
 
@@ -65,7 +66,7 @@ public class KafkaProtocolParseConfiguration {
     public ProtocolHandler kafkaProtocolHandler(PacketCombiner<ProtocolMessage> tcpPacketCombiner,
             RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser,
             ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser,
-            DataParseExtractConsumer<List<KafkaData>> kafkaDataParseExtractConsumer) {
+            DataParseExtractConsumer<List<ProtocolParseData>> kafkaDataParseExtractConsumer) {
             return new KafkaProtocolHandler(tcpPacketCombiner,kafkaRequestParser,
                     kafkaResponseParser,kafkaDataParseExtractConsumer);
     }

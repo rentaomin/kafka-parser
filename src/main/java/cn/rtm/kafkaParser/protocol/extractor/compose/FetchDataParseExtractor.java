@@ -1,9 +1,9 @@
 package cn.rtm.kafkaParser.protocol.extractor.compose;
 
-import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
+import cn.rtm.kafkaParser.protocol.ProtocolParseData;
 import cn.rtm.kafkaParser.protocol.extractor.AbstractDataParseExtractor;
-import cn.rtm.kafkaParser.protocol.KafkaData;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.common.message.FetchRequestData;
 import org.apache.kafka.common.message.FetchResponseData;
@@ -65,16 +65,16 @@ public class FetchDataParseExtractor extends AbstractDataParseExtractor<FetchReq
 
 
     @Override
-    protected List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, List<String> requestData, Map<String, List<String>> responseRecord) {
+    protected List<ProtocolParseData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, List<String> requestData, Map<String, List<String>> responseRecord) {
         if (CollectionUtils.isEmpty(requestData)) {
             return Collections.emptyList();
         }
-        List<KafkaData> data = new ArrayList<>();
+        List<ProtocolParseData> data = new ArrayList<>();
         for (String topicName : requestData) {
             List<String> topicValues = responseRecord.get(topicName);
             for (String record : topicValues) {
-                KafkaData kafkaData = buildKafkaData(kafkaProtocolParsedMessage,topicName,record);
-                data.add(kafkaData);
+                ProtocolParseData protocolParseData = buildKafkaData(kafkaProtocolParsedMessage,topicName,record);
+                data.add(protocolParseData);
             }
         }
         return data;
@@ -88,9 +88,9 @@ public class FetchDataParseExtractor extends AbstractDataParseExtractor<FetchReq
      * @param response 提取的响应数据
      * @return 返回组合后的完整数据内容
      */
-    private KafkaData buildKafkaData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, String request, String response) {
+    private ProtocolParseData buildKafkaData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, String request, String response) {
         ProtocolMessage originData = getOriginData();
-        return new KafkaData.Builder()
+        return new ProtocolParseData.Builder()
                 .srcIp(originData.getSrcIp())
                 .srcPort(originData.getSrcPort())
                 .destIp(originData.getDestIp())

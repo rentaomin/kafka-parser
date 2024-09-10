@@ -1,9 +1,9 @@
 package cn.rtm.kafkaParser.protocol.extractor.compose;
 
-import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
+import cn.rtm.kafkaParser.protocol.ProtocolParseData;
 import cn.rtm.kafkaParser.protocol.extractor.AbstractDataParseExtractor;
-import cn.rtm.kafkaParser.protocol.KafkaData;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.kafka.common.message.ProduceRequestData;
 import org.apache.kafka.common.message.ProduceResponseData;
@@ -63,14 +63,14 @@ public class ProduceDataParseExtractor extends AbstractDataParseExtractor<Produc
 
 
     @Override
-    protected List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, Map<String, List<String>> requestData, List<String> responseRecord) {
+    protected List<ProtocolParseData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, Map<String, List<String>> requestData, List<String> responseRecord) {
         if (MapUtils.isEmpty(requestData)) {
             return Collections.emptyList();
         }
         ProtocolMessage originData = getOriginData();
         return requestData.entrySet().stream()
                 .flatMap(entry -> entry.getValue().stream()
-                        .map(recordValue -> new KafkaData.Builder()
+                        .map(recordValue -> new ProtocolParseData.Builder()
                                 .srcIp(originData.getSrcIp())
                                 .srcPort(originData.getSrcPort())
                                 .destIp(originData.getDestIp())

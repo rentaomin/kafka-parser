@@ -1,5 +1,6 @@
-package cn.rtm.kafkaParser.protocol;
+package cn.rtm.kafkaParser.protocol.handler;
 
+import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.extractor.DataParseExtractSupplier;
 import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.ResponseParser;
@@ -28,13 +29,13 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, KafkaProtoc
     private final ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser;
     private final PacketCombiner<ProtocolMessage> packetCombiner;
 
-    private final DataParseExtractConsumer<List<KafkaData>> dataParseExtractConsumer;
+    private final DataParseExtractConsumer<List<ProtocolParseData>> dataParseExtractConsumer;
 
     public KafkaProtocolHandler(
             PacketCombiner<ProtocolMessage> packetCombiner,
             RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser,
             ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser,
-            DataParseExtractConsumer<List<KafkaData>> dataParseExtractConsumer
+            DataParseExtractConsumer<List<ProtocolParseData>> dataParseExtractConsumer
             ) {
         this.packetCombiner = packetCombiner;
         this.requestParser = requestParser;
@@ -60,7 +61,7 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, KafkaProtoc
                 kafkaProtocolParsedMessage = this.requestParser.parse(combinePacket);
             } else {
                 kafkaProtocolParsedMessage = responseParser.parse(combinePacket);
-                DataParseExtractor<KafkaProtocolParsedMessage, List<KafkaData>> dataParseExtractor = DataParseExtractSupplier.getDataParseExtractor(kafkaProtocolParsedMessage);
+                DataParseExtractor<KafkaProtocolParsedMessage, List<ProtocolParseData>> dataParseExtractor = DataParseExtractSupplier.getDataParseExtractor(kafkaProtocolParsedMessage);
                 if (dataParseExtractor == null) {
                     return kafkaProtocolParsedMessage;
                 }

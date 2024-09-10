@@ -1,7 +1,7 @@
 package cn.rtm.kafkaParser.protocol.extractor;
 
-import cn.rtm.kafkaParser.protocol.KafkaData;
-import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.ProtocolParseData;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.DataParseExtractor;
 import org.apache.kafka.common.header.Headers;
@@ -35,7 +35,7 @@ import java.util.function.Function;
  * @param <ResData> 提取的响应数据结果类型
  */
 public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, ResType extends ApiMessage,
-        ReqData, ResData> implements DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>> {
+        ReqData, ResData> implements DataParseExtractor<KafkaProtocolParsedMessage,List<ProtocolParseData>> {
 
     protected Logger log = LoggerFactory.getLogger(getClass());
 
@@ -77,7 +77,7 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
     private final static int maxExtractDataSize = 10;
 
     @Override
-    public List<KafkaData> extract(KafkaProtocolParsedMessage kafkaProtocolParsedMessage) {
+    public List<ProtocolParseData> extract(KafkaProtocolParsedMessage kafkaProtocolParsedMessage) {
         this.kafkaProtocolParsedMessage = kafkaProtocolParsedMessage;
         if (kafkaProtocolParsedMessage == null || !kafkaProtocolParsedMessage.isParseComplete()){
             return null;
@@ -119,7 +119,7 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
      * @param responseRecord 提取的响应数据包内容
      * @return 返回包含请求和响应提取的数据包完整内容
      */
-    protected abstract List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, ReqData requestData, ResData responseRecord);
+    protected abstract List<ProtocolParseData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, ReqData requestData, ResData responseRecord);
 
 
     /**

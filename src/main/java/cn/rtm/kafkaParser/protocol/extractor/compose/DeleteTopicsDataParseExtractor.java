@@ -1,9 +1,9 @@
 package cn.rtm.kafkaParser.protocol.extractor.compose;
 
-import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.extractor.AbstractDataParseExtractor;
-import cn.rtm.kafkaParser.protocol.KafkaData;
+import cn.rtm.kafkaParser.protocol.ProtocolParseData;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.common.message.DeleteTopicsRequestData;
 import org.apache.kafka.common.message.DeleteTopicsResponseData;
@@ -41,11 +41,11 @@ public class DeleteTopicsDataParseExtractor extends AbstractDataParseExtractor<D
     }
 
     @Override
-    protected List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, List<String> requestData, List<String> responseRecord) {
+    protected List<ProtocolParseData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, List<String> requestData, List<String> responseRecord) {
         if (CollectionUtils.isEmpty(requestData)) {
             return Collections.emptyList();
         }
-        List<KafkaData> data = new ArrayList<>();
+        List<ProtocolParseData> data = new ArrayList<>();
 
         Map<String, String> recordValues = responseRecord.stream()
                 .collect(Collectors.toMap(Function.identity(), Function.identity()));
@@ -55,7 +55,7 @@ public class DeleteTopicsDataParseExtractor extends AbstractDataParseExtractor<D
         for (String topicName : requestData) {
 
             String resTopic = recordValues.get(topicName);
-            KafkaData kafkaData = new KafkaData.Builder()
+            ProtocolParseData protocolParseData = new ProtocolParseData.Builder()
                     .srcIp(originData.getSrcIp())
                     .srcPort(originData.getSrcPort())
                     .destIp(originData.getDestIp())
@@ -67,7 +67,7 @@ public class DeleteTopicsDataParseExtractor extends AbstractDataParseExtractor<D
                     .responseDataLength(kafkaProtocolParsedMessage.getResponseLength())
                     .responseRecord(resTopic)
                     .build();
-            data.add(kafkaData);
+            data.add(protocolParseData);
         }
         return data;
     }
