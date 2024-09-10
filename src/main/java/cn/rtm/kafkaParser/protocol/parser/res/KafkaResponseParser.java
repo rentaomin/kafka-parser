@@ -1,6 +1,6 @@
 package cn.rtm.kafkaParser.protocol.parser.res;
 
-import cn.rtm.kafkaParser.protocol.Message;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
 import cn.rtm.kafkaParser.protocol.ProtocolContext;
@@ -37,8 +37,7 @@ import java.nio.ByteBuffer;
  *  <li> 方法 {@linkplain #buildParsedResponseMessage(ResponseHeaderData, ApiMessage)} 实现响应数据包解析结果的组装
  *  </ul>
  */
-
-public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Message> {
+public class KafkaResponseParser implements ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -52,19 +51,24 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Mess
 
 
     @Override
-    public Message parse(ProtocolMessage packet) {
+    public KafkaProtocolParsedMessage parse(ProtocolMessage packet) {
         this.data = packet;
 
-        Message message = null;
+        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = null;
         ByteBuffer buffer = packet.rawDataWithNoLength();
         if (packet.isResponsePacket()) {
-            message = this.parseResponse(buffer);
+            kafkaProtocolParsedMessage = this.parseResponse(buffer);
         }
-        return message;
+        return kafkaProtocolParsedMessage;
     }
 
 
-    private Message parseResponse(ByteBuffer buffer){
+    /**
+     *  解析响应数据包
+     * @param buffer 响应数据包
+     * @return 返回解析后的内容
+     */
+    private KafkaProtocolParsedMessage parseResponse(ByteBuffer buffer){
 
         RequestHeader requestHeader = this.getRequestHeaderByResponseAckId();
 
@@ -81,11 +85,11 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Mess
      * @return 返回请求数据包请求头信息
      */
     private RequestHeader getRequestHeaderByResponseAckId() {
-        Message message = getParsedRequestMessage();
-        if (message == null) {
+        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = getParsedRequestMessage();
+        if (kafkaProtocolParsedMessage == null) {
             return null;
         }
-        RequestHeader requestHeader = message.getRequestHeader();
+        RequestHeader requestHeader = kafkaProtocolParsedMessage.getRequestHeader();
         if (requestHeader == null) {
             log.error("未找到解析的请求头信息，跳过解析，当前请求：{}", data.requestDesc());
             return null;
@@ -153,21 +157,26 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Mess
      * @param responseMessage 解析的响应数据包 payload 内容
      * @return 返回解析的完整数据包内容
      */
-    private Message buildParsedResponseMessage(ResponseHeaderData responseHeader, ApiMessage responseMessage) {
-        Message message = getParsedRequestMessage();
-        if (message == null) {
+    private KafkaProtocolParsedMessage buildParsedResponseMessage(ResponseHeaderData responseHeader, ApiMessage responseMessage) {
+        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = getParsedRequestMessage();
+        if (kafkaProtocolParsedMessage == null) {
             return null;
         }
-        message.setResponseHeader(responseHeader);
-        message.setResponseMessage(responseMessage);
-        message.setResponseLength(data.getLength());
-        message.setParsedResponse(Boolean.TRUE);
-        message.setParseComplete(Boolean.TRUE);
-        message.setRequestData(Boolean.FALSE);
-        return message;
+        kafkaProtocolParsedMessage.setResponseHeader(responseHeader);
+        kafkaProtocolParsedMessage.setResponseMessage(responseMessage);
+        kafkaProtocolParsedMessage.setResponseLength(data.getLength());
+        kafkaProtocolParsedMessage.setParsedResponse(Boolean.TRUE);
+        kafkaProtocolParsedMessage.setParseComplete(Boolean.TRUE);
+        kafkaProtocolParsedMessage.setRequestData(Boolean.FALSE);
+        return kafkaProtocolParsedMessage;
     }
 
-    public Message getParsedRequestMessage() {
-        return this.protocolContext.getParamAs(data.getAcknowledgementNumber(), Message.class);
+
+    /**
+     * 获取该响应数据包对应的请求数据包解析内容
+     * @return 返回包含当前响应数据包对应的请求数据包解析内容
+     */
+    public KafkaProtocolParsedMessage getParsedRequestMessage() {
+        return this.protocolContext.getParamAs(data.getAcknowledgementNumber(), KafkaProtocolParsedMessage.class);
     }
 }

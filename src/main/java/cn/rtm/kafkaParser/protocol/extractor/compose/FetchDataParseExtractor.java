@@ -1,6 +1,6 @@
 package cn.rtm.kafkaParser.protocol.extractor.compose;
 
-import cn.rtm.kafkaParser.protocol.Message;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.extractor.AbstractDataParseExtractor;
 import cn.rtm.kafkaParser.protocol.KafkaData;
@@ -65,7 +65,7 @@ public class FetchDataParseExtractor extends AbstractDataParseExtractor<FetchReq
 
 
     @Override
-    protected List<KafkaData> composeData(Message message, List<String> requestData, Map<String, List<String>> responseRecord) {
+    protected List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, List<String> requestData, Map<String, List<String>> responseRecord) {
         if (CollectionUtils.isEmpty(requestData)) {
             return Collections.emptyList();
         }
@@ -73,7 +73,7 @@ public class FetchDataParseExtractor extends AbstractDataParseExtractor<FetchReq
         for (String topicName : requestData) {
             List<String> topicValues = responseRecord.get(topicName);
             for (String record : topicValues) {
-                KafkaData kafkaData = buildKafkaData(message,topicName,record);
+                KafkaData kafkaData = buildKafkaData(kafkaProtocolParsedMessage,topicName,record);
                 data.add(kafkaData);
             }
         }
@@ -83,23 +83,23 @@ public class FetchDataParseExtractor extends AbstractDataParseExtractor<FetchReq
 
     /**
      *  构建 kafka 提取的数据内容
-     * @param message 解析的数据包内容
+     * @param kafkaProtocolParsedMessage 解析的数据包内容
      * @param request 提取的请求数据
      * @param response 提取的响应数据
      * @return 返回组合后的完整数据内容
      */
-    private KafkaData buildKafkaData(Message message,String request,String response) {
+    private KafkaData buildKafkaData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, String request, String response) {
         ProtocolMessage originData = getOriginData();
         return new KafkaData.Builder()
                 .srcIp(originData.getSrcIp())
                 .srcPort(originData.getSrcPort())
                 .destIp(originData.getDestIp())
                 .destPort(originData.getDestPort())
-                .clientId(message.getRequestHeader().clientId())
-                .requestApi(message.getRequestApi())
+                .clientId(kafkaProtocolParsedMessage.getRequestHeader().clientId())
+                .requestApi(kafkaProtocolParsedMessage.getRequestApi())
                 .requestTopic(request)
                 .executeTime(System.currentTimeMillis())
-                .responseDataLength(message.getResponseLength())
+                .responseDataLength(kafkaProtocolParsedMessage.getResponseLength())
                 .responseRecord(response)
                 .build();
     }

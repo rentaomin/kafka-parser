@@ -8,8 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public final class RecordUtil {
-
+public final class JsonUtil {
 
     public static Map<String, String> flattenedMap(String recordValue) {
         Map<String, String> flattenedMap = new HashMap<>();
@@ -27,6 +26,11 @@ public final class RecordUtil {
     }
 
 
+    /**
+     *  判断当前字符串是否为有效的 json 格式
+     * @param json 字符串内容
+     * @return 返回 true 则是 json 格式 ，反之 false
+     */
     public static boolean isValidJson(String json) {
         if (StringUtils.isBlank(json)) {
             return false;

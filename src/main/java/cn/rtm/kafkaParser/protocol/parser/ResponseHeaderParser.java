@@ -3,10 +3,11 @@ package cn.rtm.kafkaParser.protocol.parser;
 import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
 import org.apache.kafka.common.message.ResponseHeaderData;
 import org.apache.kafka.common.protocol.ByteBufferAccessor;
+import org.apache.kafka.common.protocol.Readable;
 import java.nio.ByteBuffer;
 
 /**
- *  响应头解析器
+ *  响应头解析器,负责解析响应数据包，真实解析委托 {@link ResponseHeaderData#read(Readable, short)} 执行真正的解析
  *
  * Response Header v0 => correlation_id
  *   correlation_id => INT32

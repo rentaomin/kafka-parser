@@ -1,7 +1,7 @@
 package cn.rtm.kafkaParser.protocol.extractor;
 
 import cn.rtm.kafkaParser.protocol.KafkaData;
-import cn.rtm.kafkaParser.protocol.Message;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.DataParseExtractor;
 import org.apache.kafka.common.header.Headers;
@@ -27,7 +27,7 @@ import java.util.function.Function;
  *  <ul>
  *  <li> 实现请求数据解析方法 {@link #extractRequest(ApiMessage)}
  *  <li> 实现响应数据解析方法 {@link #extractResponse(ApiMessage)}
- *  <li> 实现解析结果数据构建方法 {@link #composeData(Message, Object, Object)}
+ *  <li> 实现解析结果数据构建方法 {@link #composeData(KafkaProtocolParsedMessage, Object, Object)}
  *  </ul>
  * @param <ReqType> 请求数据解析结果类型
  * @param <ResType> 响应数据解析结果类型
@@ -35,18 +35,18 @@ import java.util.function.Function;
  * @param <ResData> 提取的响应数据结果类型
  */
 public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, ResType extends ApiMessage,
-        ReqData, ResData> implements DataParseExtractor<Message,List<KafkaData>> {
+        ReqData, ResData> implements DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>> {
 
     protected Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     *  请求数据解析结果类型，对应 kafka 源码包：org.apache.kafka.common.message 下，
+     *  请求数据解析结果类型，对应 kafka 源码包：org.apache.kafka.common.kafkaProtocolParsedMessage 下，
      *  以 *RequestData 结尾请求实体数据类型，子类根据对应提取的数据指定对应类型
      */
     private final Class<ReqType> requestClass;
 
     /**
-     *  请求数据解析结果类型，对应 kafka 源码包：org.apache.kafka.common.message 下，
+     *  请求数据解析结果类型，对应 kafka 源码包：org.apache.kafka.common.kafkaProtocolParsedMessage 下，
      *   以 *ResponseData 结尾响应实体数据类型，子类根据对应提取的数据指定对应类型
      */
     private final Class<ResType> responseClass;
@@ -59,7 +59,7 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
     /**
      *  协议解析后的内容
      */
-    private Message message;
+    private KafkaProtocolParsedMessage kafkaProtocolParsedMessage;
 
     /**
      *  kafka record key 反序列器
@@ -77,13 +77,13 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
     private final static int maxExtractDataSize = 10;
 
     @Override
-    public List<KafkaData> extract(Message message) {
-        this.message = message;
-        if (message == null || !message.isParseComplete()){
+    public List<KafkaData> extract(KafkaProtocolParsedMessage kafkaProtocolParsedMessage) {
+        this.kafkaProtocolParsedMessage = kafkaProtocolParsedMessage;
+        if (kafkaProtocolParsedMessage == null || !kafkaProtocolParsedMessage.isParseComplete()){
             return null;
         }
-        ApiMessage requestMessage = message.getRequestMessage();
-        ApiMessage responseMessage = message.getResponseMessage();
+        ApiMessage requestMessage = kafkaProtocolParsedMessage.getRequestMessage();
+        ApiMessage responseMessage = kafkaProtocolParsedMessage.getResponseMessage();
 
         ReqType requestData = null;
         if (requestClass.isInstance(requestMessage)) {
@@ -94,7 +94,7 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
         if (responseClass.isInstance(responseMessage)) {
             responseRecord = responseClass.cast(responseMessage);
         }
-        return composeData(message, extractRequest(requestData), extractResponse(responseRecord));
+        return composeData(kafkaProtocolParsedMessage, extractRequest(requestData), extractResponse(responseRecord));
     }
 
 
@@ -113,13 +113,13 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
     protected abstract ResData extractResponse(ResType responseMessage);
 
     /**
-     *
-     * @param message
-     * @param requestData
-     * @param responseRecord
-     * @return
+     * 负责组合提取的数据内容
+     * @param kafkaProtocolParsedMessage 协议解析结果
+     * @param requestData 提取的请求数据包内容
+     * @param responseRecord 提取的响应数据包内容
+     * @return 返回包含请求和响应提取的数据包完整内容
      */
-    protected abstract List<KafkaData> composeData(Message message, ReqData requestData, ResData responseRecord);
+    protected abstract List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, ReqData requestData, ResData responseRecord);
 
 
     /**
@@ -202,16 +202,16 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
      * @return 返回协议包请求-响应基础信息
      */
     protected ProtocolMessage getOriginData() {
-        if (this.message == null) {
+        if (this.kafkaProtocolParsedMessage == null) {
             return null;
         }
-        return message.getOriginData();
+        return kafkaProtocolParsedMessage.getOriginData();
     }
 
 
     /**
-     *  自定义 kafka message key 反序列化解析器，用于提取 kafka value 内容
-     * @param keyDeserializer kafka message key 反序列化解析器
+     *  自定义 kafka kafkaProtocolParsedMessage key 反序列化解析器，用于提取 kafka value 内容
+     * @param keyDeserializer kafka kafkaProtocolParsedMessage key 反序列化解析器
      */
     protected void setKeyDeserializer(Deserializer<String> keyDeserializer) {
         this.keyDeserializer = keyDeserializer;
@@ -219,8 +219,8 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
 
 
     /**
-     *  自定义 kafka message value 反序列化解析器，用于提取 kafka value 内容
-     * @param valueDeserializer kafka message value 反序列化解析器
+     *  自定义 kafka kafkaProtocolParsedMessage value 反序列化解析器，用于提取 kafka value 内容
+     * @param valueDeserializer kafka kafkaProtocolParsedMessage value 反序列化解析器
      */
     protected void setValueDeserializer(Deserializer<String> valueDeserializer) {
         this.valueDeserializer = valueDeserializer;
@@ -229,7 +229,7 @@ public abstract class AbstractDataParseExtractor<ReqType extends ApiMessage, Res
 
     /**
      *  获取 Kafka record key 反序列器,默认为：{@link StringDeserializer}
-     * @return 返回 kafka message key 反序列化解析器
+     * @return 返回 kafka kafkaProtocolParsedMessage key 反序列化解析器
      */
     protected Deserializer<String> getKeyDeserializer() {
         return keyDeserializer;

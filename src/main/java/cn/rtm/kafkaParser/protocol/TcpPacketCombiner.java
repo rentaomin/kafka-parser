@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *  数据包的顺序和标识分片和查找对应的请求-响应数据包；分片重组实现主要为
  *
  * <ul>
- * <li> 根据{@linkplain #generatePacketKey(String, int, String, int, long)} 读取 {@linkplain #segmentBuffer} ，合并数据包
+ * <li> 根据 {@linkplain #generatePacketKey(String, int, String, int, long)} 读取 {@linkplain #segmentBuffer} ，合并数据包
  * <li> 读取数据包真实大小，Kafka 数据包前四个字节为数据包真实大小 M
  * <li> 判断当前包的长度 - 4字节 是否等于数据包真实大小M,其中4个字节为数据包真实长度，若等于则时完整数据包直接处理
  * <li> 若不是完整数据包，则读取当前数据包的 acknowledgmentNumber,并通过 {@linkplain #generatePacketKey(String, int, String, int, long)} 作为 key，标识唯一数据包

@@ -1,13 +1,11 @@
-package cn.rtm.kafkaParser.protocol.parser;
+package cn.rtm.kafkaParser.protocol;
 
-import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.extractor.DataParseExtractSupplier;
 import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.ResponseParser;
 import org.pcap4j.packet.Packet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.List;
 
 
@@ -22,20 +20,20 @@ import java.util.List;
  *  b、解析响应，先根据 ack 获取对应的请求内容，如果不存在，则跳过解析
  *  </ul>
  */
-public class KafkaProtocolHandler implements ProtocolHandler<Packet, Message> {
+public class KafkaProtocolHandler implements ProtocolHandler<Packet, KafkaProtocolParsedMessage> {
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
-    private final RequestParser<ProtocolMessage, Message> requestParser;
-    private final ResponseParser<ProtocolMessage, Message> responseParser;
+    private final RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser;
+    private final ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser;
     private final PacketCombiner<ProtocolMessage> packetCombiner;
 
     private final DataParseExtractConsumer<List<KafkaData>> dataParseExtractConsumer;
 
     public KafkaProtocolHandler(
             PacketCombiner<ProtocolMessage> packetCombiner,
-            RequestParser<ProtocolMessage, Message> requestParser,
-            ResponseParser<ProtocolMessage, Message> responseParser,
+            RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser,
+            ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser,
             DataParseExtractConsumer<List<KafkaData>> dataParseExtractConsumer
             ) {
         this.packetCombiner = packetCombiner;
@@ -46,7 +44,7 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, Message> {
 
 
     @Override
-    public Message handle(Packet packet) {
+    public KafkaProtocolParsedMessage handle(Packet packet) {
         ProtocolMessage combinePacket = null;
         try {
             combinePacket = this.packetCombiner.combine(packet);
@@ -56,22 +54,22 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, Message> {
         if (combinePacket == null || !combinePacket.isKafkaPacket() || !combinePacket.isCompletePacket()) {
             return null;
         }
-        Message message = null;
+        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = null;
         try {
             if (combinePacket.isRequestPacket()) {
-                message = this.requestParser.parse(combinePacket);
+                kafkaProtocolParsedMessage = this.requestParser.parse(combinePacket);
             } else {
-                message = responseParser.parse(combinePacket);
-                DataParseExtractor<Message, List<KafkaData>> dataParseExtractor = DataParseExtractSupplier.getDataParseExtractor(message);
+                kafkaProtocolParsedMessage = responseParser.parse(combinePacket);
+                DataParseExtractor<KafkaProtocolParsedMessage, List<KafkaData>> dataParseExtractor = DataParseExtractSupplier.getDataParseExtractor(kafkaProtocolParsedMessage);
                 if (dataParseExtractor == null) {
-                    return message;
+                    return kafkaProtocolParsedMessage;
                 }
-                this.dataParseExtractConsumer.accept(dataParseExtractor.extract(message));
+                this.dataParseExtractConsumer.accept(dataParseExtractor.extract(kafkaProtocolParsedMessage));
             }
         } catch (Exception e) {
             log.error("kafka 解析数据出错！", e);
         }
-        return message;
+        return kafkaProtocolParsedMessage;
     }
 
 }

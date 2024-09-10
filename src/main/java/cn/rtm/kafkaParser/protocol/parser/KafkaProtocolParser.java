@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
  * @author rtm
  * @param <K> 解析后的协议包内容
  */
+@FunctionalInterface
 public interface KafkaProtocolParser<K> {
 
     /**

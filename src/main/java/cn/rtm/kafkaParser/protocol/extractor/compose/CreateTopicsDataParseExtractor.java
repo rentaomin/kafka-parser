@@ -1,6 +1,6 @@
 package cn.rtm.kafkaParser.protocol.extractor.compose;
 
-import cn.rtm.kafkaParser.protocol.Message;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.extractor.AbstractDataParseExtractor;
 import cn.rtm.kafkaParser.protocol.KafkaData;
@@ -54,7 +54,7 @@ public class CreateTopicsDataParseExtractor extends AbstractDataParseExtractor<C
 
 
     @Override
-    protected List<KafkaData> composeData(Message message, List<String> requestData, List<String> responseRecord) {
+    protected List<KafkaData> composeData(KafkaProtocolParsedMessage kafkaProtocolParsedMessage, List<String> requestData, List<String> responseRecord) {
         if (CollectionUtils.isEmpty(requestData)) {
             return Collections.emptyList();
         }
@@ -72,11 +72,11 @@ public class CreateTopicsDataParseExtractor extends AbstractDataParseExtractor<C
                     .srcPort(originData.getSrcPort())
                     .destIp(originData.getDestIp())
                     .destPort(originData.getDestPort())
-                    .clientId(message.getRequestHeader().clientId())
-                    .requestApi(message.getRequestApi())
+                    .clientId(kafkaProtocolParsedMessage.getRequestHeader().clientId())
+                    .requestApi(kafkaProtocolParsedMessage.getRequestApi())
                     .requestTopic(topicName)
                     .executeTime(System.currentTimeMillis())
-                    .responseDataLength(message.getResponseLength())
+                    .responseDataLength(kafkaProtocolParsedMessage.getResponseLength())
                     .responseRecord(resTopic)
                     .build();
             data.add(kafkaData);

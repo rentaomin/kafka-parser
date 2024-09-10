@@ -4,7 +4,7 @@ import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.consumer.KafkaDataParseExtractConsumer;
 import cn.rtm.kafkaParser.protocol.extractor.DataParseExtractSupplier;
 import cn.rtm.kafkaParser.protocol.parser.DefaultProtocolContext;
-import cn.rtm.kafkaParser.protocol.parser.KafkaProtocolHandler;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.parser.req.KafkaRequestParser;
 import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.KafkaResponseParser;
@@ -38,14 +38,14 @@ public class KafkaProtocolParseConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(KafkaRequestParser.class)
-    public RequestParser<ProtocolMessage, Message> kafkaRequestParser(@Lazy ProtocolContext protocolContext) {
+    public RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser(@Lazy ProtocolContext protocolContext) {
         return new KafkaRequestParser(protocolContext);
     }
 
 
     @Bean
     @ConditionalOnMissingBean(KafkaResponseParser.class)
-    public ResponseParser<ProtocolMessage, Message> kafkaResponseParser(@Lazy ProtocolContext protocolContext) {
+    public ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser(@Lazy ProtocolContext protocolContext) {
           return new KafkaResponseParser(protocolContext);
     }
 
@@ -63,8 +63,8 @@ public class KafkaProtocolParseConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ProtocolHandler kafkaProtocolHandler(PacketCombiner<ProtocolMessage> tcpPacketCombiner,
-            RequestParser<ProtocolMessage, Message> kafkaRequestParser,
-            ResponseParser<ProtocolMessage, Message> kafkaResponseParser,
+            RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser,
+            ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser,
             DataParseExtractConsumer<List<KafkaData>> kafkaDataParseExtractConsumer) {
             return new KafkaProtocolHandler(tcpPacketCombiner,kafkaRequestParser,
                     kafkaResponseParser,kafkaDataParseExtractConsumer);

@@ -5,7 +5,7 @@ package cn.rtm.kafkaParser.protocol.enums;
  */
 public enum ProtocolType {
 
-    KAFKA("KafKA" , " Kafka 协议类型");
+    KAFKA("Kafka" , " Kafka 协议类型");
 
     private String name;
 

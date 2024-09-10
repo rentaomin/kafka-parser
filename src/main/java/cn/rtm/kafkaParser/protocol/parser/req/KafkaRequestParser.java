@@ -1,6 +1,6 @@
 package cn.rtm.kafkaParser.protocol.parser.req;
 
-import cn.rtm.kafkaParser.protocol.Message;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolContext;
 import org.apache.kafka.common.protocol.ApiKeys;
@@ -26,7 +26,7 @@ import static org.apache.kafka.common.protocol.ApiKeys.API_VERSIONS;
  *  <li> 方法 {@linkplain #buildParsedRequestMessage(RequestHeader, ApiMessage)} 实现请求数据包解析结果的组装
  *  </ul>
  */
-public class KafkaRequestParser implements RequestParser<ProtocolMessage, Message> {
+public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> {
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
@@ -39,7 +39,7 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, Messag
     }
 
     @Override
-    public Message parse(ProtocolMessage packet) {
+    public KafkaProtocolParsedMessage parse(ProtocolMessage packet) {
         this.data = packet;
 
         ByteBuffer buffer = packet.rawDataWithNoLength();
@@ -55,15 +55,15 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, Messag
      * @param buffer 请求数据包
      * @return 返回解析后的请求数据包内容
      */
-    private Message parseRequest(ByteBuffer buffer) {
+    private KafkaProtocolParsedMessage parseRequest(ByteBuffer buffer) {
 
         RequestHeader header = parseRequestHeader(buffer);
 
         ApiMessage payload = parseRequestPayload(buffer, header);
 
-        Message message = buildParsedRequestMessage(header,payload);
+        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = buildParsedRequestMessage(header,payload);
 
-        return message;
+        return kafkaProtocolParsedMessage;
     }
 
 
@@ -125,23 +125,29 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, Messag
      * @param payload 解析的请求 payload 内容
      * @return 返回解析完成的请求数据包内容
      */
-    private Message buildParsedRequestMessage(RequestHeader header, ApiMessage payload) {
+    private KafkaProtocolParsedMessage buildParsedRequestMessage(RequestHeader header, ApiMessage payload) {
         if (header == null) {
             return null;
         }
-        Message message = new Message();
-        message.setRequestHeader(header);
-        message.setRequestMessage(payload);
-        message.setRequestLength(data.getLength());
-        message.setOriginData(data);
-        message.setRequestApi(buildRequestApi(header,payload));
-        message.setRequestData(Boolean.TRUE);
-        message.setParsedRequest(Boolean.TRUE);
-        protocolContext.addParam(data.getResponseAckId(), message);
-        return message;
+        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = new KafkaProtocolParsedMessage();
+        kafkaProtocolParsedMessage.setRequestHeader(header);
+        kafkaProtocolParsedMessage.setRequestMessage(payload);
+        kafkaProtocolParsedMessage.setRequestLength(data.getLength());
+        kafkaProtocolParsedMessage.setOriginData(data);
+        kafkaProtocolParsedMessage.setRequestApi(buildRequestApi(header));
+        kafkaProtocolParsedMessage.setRequestData(Boolean.TRUE);
+        kafkaProtocolParsedMessage.setParsedRequest(Boolean.TRUE);
+        protocolContext.addParam(data.getResponseAckId(), kafkaProtocolParsedMessage);
+        return kafkaProtocolParsedMessage;
     }
 
-    private String buildRequestApi(RequestHeader header,ApiMessage payload) {
+
+    /**
+     *  构建请求 api 语义标识
+     * @param header 请求头信息
+     * @return 返回当前请求标识语义
+     */
+    private String buildRequestApi(RequestHeader header) {
         StringBuilder apiInfo = new StringBuilder(32);
         ApiKeys apiKeys = header.apiKey();
         String slash = " ";

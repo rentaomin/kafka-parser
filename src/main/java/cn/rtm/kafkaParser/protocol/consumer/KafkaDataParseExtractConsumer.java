@@ -16,10 +16,10 @@ public class KafkaDataParseExtractConsumer implements DataParseExtractConsumer<L
 
     @Override
     public void accept(List<KafkaData> extractData) {
-        log.error("start cunsume data!");
         if (CollectionUtils.isEmpty(extractData)) {
             return;
         }
+        System.out.println(extractData.size());
 
     }
 }

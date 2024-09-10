@@ -2,7 +2,7 @@ package cn.rtm.kafkaParser.protocol.extractor;
 
 import cn.rtm.kafkaParser.protocol.DataParseExtractor;
 import cn.rtm.kafkaParser.protocol.KafkaData;
-import cn.rtm.kafkaParser.protocol.Message;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.extractor.compose.CreateTopicsDataParseExtractor;
 import cn.rtm.kafkaParser.protocol.extractor.compose.DeleteTopicsDataParseExtractor;
 import cn.rtm.kafkaParser.protocol.extractor.compose.FetchDataParseExtractor;
@@ -21,15 +21,15 @@ public class DataParseExtractSupplier {
     /**
      *  存储协议解析结果数据提取实例，key: 协议解析结果类型，Value: 需要解析 Key 的数据提取器实例
      */
-    public final static Map<Class<?>, DataParseExtractor<Message,List<KafkaData>>> supplier = register();
+    public final static Map<Class<?>, DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>>> supplier = register();
 
 
     /**
      *  自动注册数据提取器实例
      * @return 返回数据提取器容器
      */
-    private static Map<Class<?>, DataParseExtractor<Message,List<KafkaData>>> register() {
-        Map<Class<?>, DataParseExtractor<Message,List<KafkaData>>> extractorMap = new ConcurrentHashMap<>(12);
+    private static Map<Class<?>, DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>>> register() {
+        Map<Class<?>, DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>>> extractorMap = new ConcurrentHashMap<>(12);
 
         extractorMap.put(FetchRequestData.class, new FetchDataParseExtractor());
         extractorMap.put(FetchResponseData.class, new FetchDataParseExtractor());
@@ -51,22 +51,22 @@ public class DataParseExtractSupplier {
      * @param clazz 待提取数据的数据类
      * @param dataParseExtractor 数据提取器
      */
-    public void register(Class<?> clazz, DataParseExtractor<Message,List<KafkaData>> dataParseExtractor) {
+    public void register(Class<?> clazz, DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>> dataParseExtractor) {
         supplier.put(clazz,dataParseExtractor);
     }
 
 
     /**
      *  获取 kafka 协议解析数据提取器
-     * @param message 请求-响应解析内容
+     * @param kafkaProtocolParsedMessage 请求-响应解析内容
      * @return 返回对应的数据提取器
      */
-    public static DataParseExtractor<Message,List<KafkaData>> getDataParseExtractor(Message message) {
-        if (message == null) {
+    public static DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>> getDataParseExtractor(KafkaProtocolParsedMessage kafkaProtocolParsedMessage) {
+        if (kafkaProtocolParsedMessage == null) {
             return null;
         }
-        ApiMessage requestMessage = message.getRequestMessage();
-        ApiMessage responseMessage = message.getResponseMessage();
+        ApiMessage requestMessage = kafkaProtocolParsedMessage.getRequestMessage();
+        ApiMessage responseMessage = kafkaProtocolParsedMessage.getResponseMessage();
         // 全部解析完成才进行数据提取
         if (requestMessage == null || responseMessage == null) {
             return null;
@@ -82,7 +82,7 @@ public class DataParseExtractSupplier {
      * @param clazz 待提取数据的数据类
      * @return 返回支持提取的数据提取器
      */
-    public static DataParseExtractor<Message,List<KafkaData>> getDataParseExtractor(Class<?> clazz) {
+    public static DataParseExtractor<KafkaProtocolParsedMessage,List<KafkaData>> getDataParseExtractor(Class<?> clazz) {
         if (clazz == null) {
             return null;
         }

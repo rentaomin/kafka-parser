@@ -6,6 +6,7 @@ package cn.rtm.kafkaParser.protocol;
  * @param <P> 原生协议数据包
  * @param <M> 解析后的消息
  */
+@FunctionalInterface
 public interface ProtocolHandler<P,M> {
 
     /**

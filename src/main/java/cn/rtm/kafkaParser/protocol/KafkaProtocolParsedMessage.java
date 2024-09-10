@@ -6,13 +6,13 @@ import org.apache.kafka.common.protocol.ApiMessage;
 import org.apache.kafka.common.requests.RequestHeader;
 
 /**
- *  Kafka 消息体
+ *  该类主要负责存储 Kafka 协议解析结果
  *
  *  RequestOrResponse => Size (RequestMessage | ResponseMessage)
  *   Size => int32
  * @author rtm
  */
-public class Message {
+public class KafkaProtocolParsedMessage {
 
     /**
      * 	The message_size field gives the size of the subsequent request or response message in bytes.
@@ -208,7 +208,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return "Message{" +
+        return "KafkaProtocolParsedMessage{" +
                 "messageSize=" + messageSize +
                 ", requestLength=" + requestLength +
                 ", responseLength=" + responseLength +

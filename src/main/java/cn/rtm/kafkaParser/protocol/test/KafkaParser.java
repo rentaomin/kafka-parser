@@ -5,7 +5,7 @@ import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.consumer.KafkaDataParseExtractConsumer;
 import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
 import cn.rtm.kafkaParser.protocol.parser.DefaultProtocolContext;
-import cn.rtm.kafkaParser.protocol.parser.KafkaProtocolHandler;
+import cn.rtm.kafkaParser.protocol.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.parser.req.KafkaRequestParser;
 import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.KafkaResponseParser;
@@ -78,8 +78,8 @@ public class KafkaParser {
     private ProtocolHandler getProtocolParseCoordinator() {
         PacketCombiner<ProtocolMessage> packetCombiner = new TcpPacketCombiner();
         ProtocolContext protocolContext = new DefaultProtocolContext();
-        RequestParser<ProtocolMessage, Message> requestParser = new KafkaRequestParser(protocolContext);
-        ResponseParser<ProtocolMessage, Message> responseParser = new KafkaResponseParser(protocolContext);
+        RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser = new KafkaRequestParser(protocolContext);
+        ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser = new KafkaResponseParser(protocolContext);
         DataParseExtractConsumer<List<KafkaData>> kafkaDataParseExtractConsumer = new KafkaDataParseExtractConsumer();
         ProtocolHandler protocolHandler = new KafkaProtocolHandler(packetCombiner,requestParser,
                 responseParser,kafkaDataParseExtractConsumer);
