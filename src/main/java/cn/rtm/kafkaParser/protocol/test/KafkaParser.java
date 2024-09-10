@@ -82,7 +82,7 @@ public class KafkaParser {
         RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser = new KafkaRequestParser(protocolContext);
         ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser = new KafkaResponseParser(protocolContext);
         DataParseExtractConsumer<List<ProtocolParseData>> kafkaDataParseExtractConsumer = new KafkaDataParseExtractConsumer();
-        ProtocolHandler protocolHandler = new KafkaProtocolHandler(packetCombiner,requestParser,
+        ProtocolHandler<Packet, KafkaProtocolParsedMessage> protocolHandler = new KafkaProtocolHandler(packetCombiner,requestParser,
                 responseParser,kafkaDataParseExtractConsumer);
         return protocolHandler;
     }
