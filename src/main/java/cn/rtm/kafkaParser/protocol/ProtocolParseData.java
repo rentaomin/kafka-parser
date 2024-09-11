@@ -13,77 +13,77 @@ public class ProtocolParseData {
     /**
      *  数据包唯一标识
      */
-    private long id;
+    private final long id;
 
     /**
      *  请求的来源 ip 地址
      */
-    private String srcIp;
+    private final String srcIp;
 
     /**
      * 请求来源 ip 地址端口
      */
-    private int srcPort;
+    private final int srcPort;
 
     /**
      *  请求的目标 ip 地址
      */
-    private String destIp;
+    private final String destIp;
 
     /**
      *  请求目标 ip 地址端口
      */
-    private int destPort;
+    private final int destPort;
 
     /**
      *  数据请求客户端标识
      */
-    private String clientId;
+    private final String clientId;
 
     /**
      *  请求数据标识语义，如关系数据库为 sql, 非关系数据库为 api 描述
      */
-    private String requestApi;
+    private final String requestApi;
 
     /**
      *  协议类型，{@link ProtocolType}
      */
-    private String protocolType;
+    private final String protocolType;
 
     /**
      *  存储请求数据提取的数据内容
      */
-    private String requestTopic;
+    private final String requestTopic;
 
     /**
      *  存储响应数据提取的数据内容
      */
-    private String responseRecord;
+    private final String responseRecord;
 
     /**
      * 响应数据包携带的响应体长度
      */
-    private int responseDataLength;
+    private final int responseDataLength;
 
     /**
      *  请求数据包解析开始时间
      */
-    private LocalDateTime startTime;
+    private final LocalDateTime startTime;
 
     /**
      *  响应数据包解析开始时间
      */
-    private LocalDateTime endTime;
+    private final LocalDateTime endTime;
 
     /**
      *  提取数据执行时间
      */
-    private long executeTime;
+    private final long executeTime;
 
     /**
      *  扩展字段，存储额外属性内容
      */
-    private Map<String,Object> extraValues;
+    private final Map<String,Object> extraValues;
 
 
     private ProtocolParseData(Builder builder) {
@@ -209,7 +209,7 @@ public class ProtocolParseData {
             return this;
         }
 
-        public Builder extraValues(Map<String,Object> executeTime) {
+        public Builder extraValues(Map<String,Object> extraValues) {
             this.extraValues = extraValues;
             return this;
         }
