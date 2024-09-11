@@ -14,6 +14,9 @@ import org.apache.kafka.common.requests.RequestHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 
 /**
@@ -41,9 +44,20 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Kafk
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    /**
+     *  捕获的协议原始数据内容，包含公共通信信息
+     */
     private ProtocolMessage data;
 
+    /**
+     *  协议上下文，负责实现请求-响应数据包数据传递
+     */
     private final ProtocolContext protocolContext;
+
+    /**
+     *  响应数据包解析包开始时间
+     */
+    private LocalDateTime responseParseStartTime;
 
     public KafkaResponseParser(ProtocolContext protocolContext) {
         this.protocolContext = protocolContext;
@@ -52,14 +66,25 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Kafk
 
     @Override
     public KafkaProtocolParsedMessage parse(ProtocolMessage packet) {
-        this.data = packet;
+        this.init(packet);
+
+        ByteBuffer buffer = packet.rawDataWithNoLength();
 
         KafkaProtocolParsedMessage kafkaProtocolParsedMessage = null;
-        ByteBuffer buffer = packet.rawDataWithNoLength();
         if (packet.isResponsePacket()) {
             kafkaProtocolParsedMessage = this.parseResponse(buffer);
         }
         return kafkaProtocolParsedMessage;
+    }
+
+
+    /**
+     *  响应请求数据包解析初始化
+     * @param packet 响应数据包
+     */
+    private void init(ProtocolMessage packet) {
+        this.data = packet;
+        this.responseParseStartTime = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
     }
 
 
@@ -168,6 +193,7 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Kafk
         kafkaProtocolParsedMessage.setParsedResponse(Boolean.TRUE);
         kafkaProtocolParsedMessage.setParseComplete(Boolean.TRUE);
         kafkaProtocolParsedMessage.setRequestData(Boolean.FALSE);
+        kafkaProtocolParsedMessage.setEndTime(this.responseParseStartTime);
         return kafkaProtocolParsedMessage;
     }
 

@@ -5,6 +5,7 @@ import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import org.apache.kafka.common.message.ResponseHeaderData;
 import org.apache.kafka.common.protocol.ApiMessage;
 import org.apache.kafka.common.requests.RequestHeader;
+import java.time.LocalDateTime;
 
 /**
  *  该类主要负责存储 Kafka 协议解析结果
@@ -79,6 +80,16 @@ public class KafkaProtocolParsedMessage {
      *  标记是否为请求数据包，true 则为 请求数据解析内容，false 则为响应数据内容
      */
     private boolean isRequestData;
+
+    /**
+     *  请求数据包解析开始时间
+     */
+    private LocalDateTime startTime;
+
+    /**
+     *  响应数据包解析结束时间
+     */
+    private LocalDateTime endTime;
 
 
     public int getMessageSize() {
@@ -207,6 +218,23 @@ public class KafkaProtocolParsedMessage {
         isRequestData = requestData;
     }
 
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
     @Override
     public String toString() {
         return "KafkaProtocolParsedMessage{" +
@@ -223,6 +251,8 @@ public class KafkaProtocolParsedMessage {
                 ", parsedResponse=" + parsedResponse +
                 ", parseComplete=" + parseComplete +
                 ", isRequestData=" + isRequestData +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
                 '}';
     }
 }

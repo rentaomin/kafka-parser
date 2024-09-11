@@ -1,6 +1,7 @@
 package cn.rtm.kafkaParser.protocol;
 
 import cn.rtm.kafkaParser.protocol.enums.ProtocolType;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -65,6 +66,16 @@ public class ProtocolParseData {
     private int responseDataLength;
 
     /**
+     *  请求数据包解析开始时间
+     */
+    private LocalDateTime startTime;
+
+    /**
+     *  响应数据包解析开始时间
+     */
+    private LocalDateTime endTime;
+
+    /**
      *  提取数据执行时间
      */
     private long executeTime;
@@ -87,6 +98,8 @@ public class ProtocolParseData {
         this.requestTopic = builder.requestTopic;
         this.responseRecord = builder.responseRecord;
         this.responseDataLength = builder.responseDataLength;
+        this.startTime = builder.startTime;
+        this.endTime = builder.endTime;
         this.executeTime = builder.executeTime;
         this.extraValues = builder.extraValues;
     }
@@ -116,6 +129,10 @@ public class ProtocolParseData {
         private String responseRecord;
 
         private int responseDataLength;
+
+        private LocalDateTime startTime;
+
+        private LocalDateTime endTime;
 
         private long executeTime;
 
@@ -173,6 +190,17 @@ public class ProtocolParseData {
 
         public Builder responseDataLength(int responseDataLength) {
             this.responseDataLength = responseDataLength;
+            return this;
+        }
+
+
+        public Builder startTime(LocalDateTime startTime) {
+            this.startTime = startTime;
+            return this;
+        }
+
+        public Builder endTime(LocalDateTime endTime) {
+            this.endTime = endTime;
             return this;
         }
 
@@ -236,6 +264,15 @@ public class ProtocolParseData {
         return responseDataLength;
     }
 
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
     public long getExecuteTime() {
         return executeTime;
     }
@@ -258,6 +295,8 @@ public class ProtocolParseData {
                 ", requestTopic='" + requestTopic + '\'' +
                 ", responseRecord='" + responseRecord + '\'' +
                 ", responseDataLength=" + responseDataLength +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
                 ", executeTime=" + executeTime +
                 ", extraValues=" + extraValues +
                 '}';

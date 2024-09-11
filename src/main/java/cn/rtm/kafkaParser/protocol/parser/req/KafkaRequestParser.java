@@ -10,6 +10,9 @@ import org.apache.kafka.common.requests.RequestHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import static org.apache.kafka.common.protocol.ApiKeys.API_VERSIONS;
 
 /**
@@ -30,9 +33,20 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
+    /**
+     *  捕获的协议原始数据内容，包含公共通信信息
+     */
     private ProtocolMessage data;
 
+    /**
+     *  协议上下文，负责实现请求-响应数据包数据传递
+     */
     private ProtocolContext protocolContext;
+
+    /**
+     *  请求数据包解析包开始时间
+     */
+    private LocalDateTime requestStartParseTime;
 
     public KafkaRequestParser(ProtocolContext protocolContext) {
         this.protocolContext = protocolContext;
@@ -40,7 +54,7 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
 
     @Override
     public KafkaProtocolParsedMessage parse(ProtocolMessage packet) {
-        this.data = packet;
+        this.init(packet);
 
         ByteBuffer buffer = packet.rawDataWithNoLength();
         if (packet.isRequestPacket()) {
@@ -51,19 +65,27 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
 
 
     /**
+     * 请求数据包解析初始化
+     * @param packet 请求数据包
+     */
+    public void init(ProtocolMessage packet) {
+        this.data = packet;
+        this.requestStartParseTime = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
+    }
+
+
+    /**
      *  解析请求数据包内容
      * @param buffer 请求数据包
      * @return 返回解析后的请求数据包内容
      */
     private KafkaProtocolParsedMessage parseRequest(ByteBuffer buffer) {
 
-        RequestHeader header = parseRequestHeader(buffer);
+        RequestHeader header = this.parseRequestHeader(buffer);
 
-        ApiMessage payload = parseRequestPayload(buffer, header);
+        ApiMessage payload = this.parseRequestPayload(buffer, header);
 
-        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = buildParsedRequestMessage(header,payload);
-
-        return kafkaProtocolParsedMessage;
+        return this.buildParsedRequestMessage(header,payload);
     }
 
 
@@ -137,6 +159,7 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
         kafkaProtocolParsedMessage.setRequestApi(buildRequestApi(header));
         kafkaProtocolParsedMessage.setRequestData(Boolean.TRUE);
         kafkaProtocolParsedMessage.setParsedRequest(Boolean.TRUE);
+        kafkaProtocolParsedMessage.setStartTime(this.requestStartParseTime);
         protocolContext.addParam(data.getResponseAckId(), kafkaProtocolParsedMessage);
         return kafkaProtocolParsedMessage;
     }
