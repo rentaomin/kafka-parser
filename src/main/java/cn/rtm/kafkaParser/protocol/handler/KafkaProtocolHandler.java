@@ -2,11 +2,11 @@ package cn.rtm.kafkaParser.protocol.handler;
 
 import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.extractor.DataParseExtractSupplier;
-import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
-import cn.rtm.kafkaParser.protocol.parser.res.ResponseParser;
+import org.apache.commons.collections4.CollectionUtils;
 import org.pcap4j.packet.Packet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -25,22 +25,48 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, KafkaProtoc
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
-    private final RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser;
-    private final ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser;
+    /**
+     *  默认 kafka 监听端口
+     */
+    private static final int DEFAULT_LISTEN_PORT = 9094;
+
+    /**
+     *  请求数据包解析器
+     */
+    private final ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser;
+
+    /**
+     *  响应数据包解析器
+     */
+    private final ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser;
+
+    /**
+     *  tcp 数据包重组组件，负责重组 tcp 分片包
+     */
     private final PacketCombiner<ProtocolMessage> packetCombiner;
 
+    /**
+     *  数据解析提取器，对解析提取的数据内容做额外处理
+     */
     private final DataParseExtractConsumer<List<ProtocolParseData>> dataParseExtractConsumer;
+
+    /**
+     *  需要解析协议的监听端口
+     */
+    private List<Integer> listenPorts;
 
     public KafkaProtocolHandler(
             PacketCombiner<ProtocolMessage> packetCombiner,
-            RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser,
-            ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser,
-            DataParseExtractConsumer<List<ProtocolParseData>> dataParseExtractConsumer
+            ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser,
+            ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser,
+            DataParseExtractConsumer<List<ProtocolParseData>> dataParseExtractConsumer,
+            List<Integer> listenPorts
             ) {
         this.packetCombiner = packetCombiner;
         this.requestParser = requestParser;
         this.responseParser = responseParser;
         this.dataParseExtractConsumer = dataParseExtractConsumer;
+        this.listenPorts = listenPorts;
     }
 
 
@@ -52,14 +78,22 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, KafkaProtoc
         } catch (Exception e) {
             log.error("重组数据包出错！", e);
         }
-        if (combinePacket == null || !combinePacket.isKafkaPacket() || !combinePacket.isCompletePacket()) {
+
+        if (combinePacket == null) {
             return null;
         }
+
+        this.initializeListenPort(combinePacket);
+
+        if (!combinePacket.isTargetPacket() || !combinePacket.isCompletePacket()) {
+            return null;
+        }
+
         KafkaProtocolParsedMessage kafkaProtocolParsedMessage = null;
         try {
             if (combinePacket.isRequestPacket()) {
                 kafkaProtocolParsedMessage = this.requestParser.parse(combinePacket);
-            } else {
+            } else if (combinePacket.isResponsePacket()){
                 kafkaProtocolParsedMessage = responseParser.parse(combinePacket);
                 DataParseExtractor<KafkaProtocolParsedMessage, List<ProtocolParseData>> dataParseExtractor = DataParseExtractSupplier.getDataParseExtractor(kafkaProtocolParsedMessage);
                 if (dataParseExtractor == null) {
@@ -71,6 +105,18 @@ public class KafkaProtocolHandler implements ProtocolHandler<Packet, KafkaProtoc
             log.error("kafka 解析数据出错！", e);
         }
         return kafkaProtocolParsedMessage;
+    }
+
+
+    /**
+     *   初始化需要解析的协议端口
+     * @param combinePacket 捕获的完整数据包内容
+     */
+    private void initializeListenPort(ProtocolMessage combinePacket) {
+        if (CollectionUtils.isEmpty(listenPorts)) {
+            listenPorts = Arrays.asList(DEFAULT_LISTEN_PORT);
+        }
+        combinePacket.setListenPorts(listenPorts);
     }
 
 }

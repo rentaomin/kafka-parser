@@ -75,6 +75,8 @@ public class CreateTopicsDataParseExtractor extends AbstractDataParseExtractor<C
                     .clientId(kafkaProtocolParsedMessage.getRequestHeader().clientId())
                     .requestApi(kafkaProtocolParsedMessage.getRequestApi())
                     .requestTopic(topicName)
+                    .startTime(kafkaProtocolParsedMessage.getStartTime())
+                    .endTime(kafkaProtocolParsedMessage.getEndTime())
                     .executeTime(System.currentTimeMillis())
                     .responseDataLength(kafkaProtocolParsedMessage.getResponseLength())
                     .responseRecord(resTopic)

@@ -3,17 +3,15 @@ package cn.rtm.kafkaParser.protocol.config;
 import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.consumer.KafkaDataParseExtractConsumer;
 import cn.rtm.kafkaParser.protocol.extractor.DataParseExtractSupplier;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.parser.DefaultProtocolContext;
-import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.parser.req.KafkaRequestParser;
-import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.KafkaResponseParser;
-import cn.rtm.kafkaParser.protocol.parser.res.ResponseParser;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -39,14 +37,14 @@ public class KafkaProtocolParseConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(KafkaRequestParser.class)
-    public RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser(@Lazy ProtocolContext protocolContext) {
+    public ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser(ProtocolContext protocolContext) {
         return new KafkaRequestParser(protocolContext);
     }
 
 
     @Bean
     @ConditionalOnMissingBean(KafkaResponseParser.class)
-    public ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser(@Lazy ProtocolContext protocolContext) {
+    public ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser(ProtocolContext protocolContext) {
           return new KafkaResponseParser(protocolContext);
     }
 
@@ -64,10 +62,10 @@ public class KafkaProtocolParseConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ProtocolHandler kafkaProtocolHandler(PacketCombiner<ProtocolMessage> tcpPacketCombiner,
-            RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser,
-            ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser,
+            ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaRequestParser,
+            ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> kafkaResponseParser,
             DataParseExtractConsumer<List<ProtocolParseData>> kafkaDataParseExtractConsumer) {
             return new KafkaProtocolHandler(tcpPacketCombiner,kafkaRequestParser,
-                    kafkaResponseParser,kafkaDataParseExtractConsumer);
+                    kafkaResponseParser,kafkaDataParseExtractConsumer, Arrays.asList(9094));
     }
 }

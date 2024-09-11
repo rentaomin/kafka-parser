@@ -78,6 +78,8 @@ public class ProduceDataParseExtractor extends AbstractDataParseExtractor<Produc
                                 .clientId(kafkaProtocolParsedMessage.getRequestHeader().clientId())
                                 .requestApi(kafkaProtocolParsedMessage.getRequestApi())
                                 .requestTopic(entry.getKey())  // 使用 entry 的 key 作为 topicName
+                                .startTime(kafkaProtocolParsedMessage.getStartTime())
+                                .endTime(kafkaProtocolParsedMessage.getEndTime())
                                 .executeTime(System.currentTimeMillis())
                                 .responseDataLength(kafkaProtocolParsedMessage.getResponseLength())
                                 .responseRecord(recordValue)

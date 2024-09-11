@@ -98,6 +98,8 @@ public class FetchDataParseExtractor extends AbstractDataParseExtractor<FetchReq
                 .clientId(kafkaProtocolParsedMessage.getRequestHeader().clientId())
                 .requestApi(kafkaProtocolParsedMessage.getRequestApi())
                 .requestTopic(request)
+                .startTime(kafkaProtocolParsedMessage.getStartTime())
+                .endTime(kafkaProtocolParsedMessage.getEndTime())
                 .executeTime(System.currentTimeMillis())
                 .responseDataLength(kafkaProtocolParsedMessage.getResponseLength())
                 .responseRecord(response)

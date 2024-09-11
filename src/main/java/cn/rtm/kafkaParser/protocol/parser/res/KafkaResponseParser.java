@@ -1,9 +1,9 @@
 package cn.rtm.kafkaParser.protocol.parser.res;
 
-import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
-import cn.rtm.kafkaParser.protocol.ProtocolMessage;
-import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
 import cn.rtm.kafkaParser.protocol.ProtocolContext;
+import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.parser.AbstractProtocolParser;
 import cn.rtm.kafkaParser.protocol.parser.ResponseHeaderParser;
 import org.apache.kafka.common.message.ResponseHeaderData;
 import org.apache.kafka.common.protocol.ApiKeys;
@@ -11,12 +11,7 @@ import org.apache.kafka.common.protocol.ApiMessage;
 import org.apache.kafka.common.protocol.Readable;
 import org.apache.kafka.common.requests.AbstractResponse;
 import org.apache.kafka.common.requests.RequestHeader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 
 /**
@@ -24,84 +19,54 @@ import java.time.ZoneId;
  *  造轮子，且可保证与官方 api 同步更新支持，可无需关心版本兼容问题
  *
  *  <ul>
- *  <li> 方法 {@linkplain #parseResponse(ByteBuffer)} 实现 Kafka 响应数据包的解析
  *
  *  <li> 响应数据包内容格式为： ResponseMessage =》 Size ResponseHeader ResponsePayload
  *
- *  <li> 方法 {@linkplain #parseResponseHeader(ByteBuffer, RequestHeader)} 实现 ResponseHeader 解析,此处
+ *  <li> 方法 {@linkplain #parseHeader(ByteBuffer)} 实现 ResponseHeader 解析,此处
  *  自定义{@linkplain ResponseHeaderParser#parsePacket(ByteBuffer, short)} 实现数据包装代理 ,具体实现
  *  委托 Kafka-client 源码 {@linkplain ResponseHeaderData#read(Readable, short)}执行真正的解析； 解析响应数据包
  *  需要依赖对应的请求数据包解析内容，主要通过{@linkplain #getRequestHeaderByResponseAckId()} 获取请求解析结果，主要通过
  *  ack-number 和 correlationId 进行匹配请求-响应，请求数据包的 ack-number 也是响应数据包的 seq-number
  *
- *  <li> 方法 {@linkplain #parseResponsePayload(ByteBuffer, RequestHeader)} 实现 ResponsePayload 解析，具体实现
+ *  <li> 方法 {@linkplain #parseBody(ResponseHeaderData, ByteBuffer)} 实现 ResponsePayload 解析，具体实现
  *  委托 Kafka-client 源码 {@linkplain AbstractResponse#parseResponse(ApiKeys, ByteBuffer, short)}  执行真正的解析
  *
- *  <li> 方法 {@linkplain #buildParsedResponseMessage(ResponseHeaderData, ApiMessage)} 实现响应数据包解析结果的组装
+ *  <li> 方法 {@linkplain #buildParsedMessage(ResponseHeaderData, ApiMessage)} 实现响应数据包解析结果的组装
  *  </ul>
  */
-public class KafkaResponseParser implements ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> {
+public class KafkaResponseParser extends AbstractProtocolParser<ResponseHeaderData, ApiMessage, KafkaProtocolParsedMessage> {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
-
-    /**
-     *  捕获的协议原始数据内容，包含公共通信信息
-     */
-    private ProtocolMessage data;
-
-    /**
-     *  协议上下文，负责实现请求-响应数据包数据传递
-     */
-    private final ProtocolContext protocolContext;
-
-    /**
-     *  响应数据包解析包开始时间
-     */
-    private LocalDateTime responseParseStartTime;
 
     public KafkaResponseParser(ProtocolContext protocolContext) {
-        this.protocolContext = protocolContext;
+        super(protocolContext);
     }
 
 
     @Override
-    public KafkaProtocolParsedMessage parse(ProtocolMessage packet) {
-        this.init(packet);
-
-        ByteBuffer buffer = packet.rawDataWithNoLength();
-
-        KafkaProtocolParsedMessage kafkaProtocolParsedMessage = null;
-        if (packet.isResponsePacket()) {
-            kafkaProtocolParsedMessage = this.parseResponse(buffer);
+    protected ResponseHeaderData parseHeader(ByteBuffer buffer) {
+        if (!isResponsePacket()) {
+            return null;
         }
-        return kafkaProtocolParsedMessage;
-    }
-
-
-    /**
-     *  响应请求数据包解析初始化
-     * @param packet 响应数据包
-     */
-    private void init(ProtocolMessage packet) {
-        this.data = packet;
-        this.responseParseStartTime = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
-    }
-
-
-    /**
-     *  解析响应数据包
-     * @param buffer 响应数据包
-     * @return 返回解析后的内容
-     */
-    private KafkaProtocolParsedMessage parseResponse(ByteBuffer buffer){
-
         RequestHeader requestHeader = this.getRequestHeaderByResponseAckId();
+        if (buffer == null || requestHeader == null) {
+            return null;
+        }
 
-        ResponseHeaderData responseHeader = this.parseResponseHeader(buffer, requestHeader);
+        ResponseHeaderData responseHeader = null;
+        try {
+            responseHeader = new ResponseHeaderParser()
+                    .parsePacket(buffer, requestHeader.apiKey()
+                    .responseHeaderVersion(requestHeader.apiVersion()));
+        } catch (ProtocolParseException e) {
+            log.error("解析响应数据包请求头出错：{} ", getCommonData().requestDesc());
+        }
 
-        ApiMessage responseMessage = this.parseResponsePayload(buffer, requestHeader);
-
-        return this.buildParsedResponseMessage(responseHeader, responseMessage);
+        if (responseHeader != null && requestHeader.correlationId() != responseHeader.correlationId()) {
+            log.error("解析的请求 correlationId:{} 和响应 correlationId: {} 内容不匹配！",
+                    requestHeader.correlationId(), responseHeader.correlationId());
+            return null;
+        }
+        return responseHeader;
     }
 
 
@@ -116,7 +81,7 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Kafk
         }
         RequestHeader requestHeader = kafkaProtocolParsedMessage.getRequestHeader();
         if (requestHeader == null) {
-            log.error("未找到解析的请求头信息，跳过解析，当前请求：{}", data.requestDesc());
+            log.error("未找到解析的请求头信息，跳过解析，当前请求：{}", getCommonData().requestDesc());
             return null;
         }
         return requestHeader;
@@ -124,41 +89,17 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Kafk
 
 
     /**
-     *  解析响应数据包请求头信息
-     * @param buffer 响应数据包
-     * @param requestHeader 响应数据包对应的请求数据包请求头信息
-     * @return 返回解析后的响应数据包请求头信息
+     * 获取该响应数据包对应的请求数据包解析内容
+     * @return 返回包含当前响应数据包对应的请求数据包解析内容
      */
-    private ResponseHeaderData parseResponseHeader(ByteBuffer buffer, RequestHeader requestHeader) {
-        if (buffer == null || requestHeader == null) {
-            return null;
-        }
-
-        ResponseHeaderData responseHeader = null;
-        try {
-            responseHeader = new ResponseHeaderParser()
-                    .parsePacket(buffer, requestHeader.apiKey()
-                            .responseHeaderVersion(requestHeader.apiVersion()));
-        } catch (ProtocolParseException e) {
-            log.error("解析响应数据包请求头出错：{} ", data.requestDesc());
-        }
-
-        if (responseHeader != null && requestHeader.correlationId() != responseHeader.correlationId()) {
-            log.error("解析的请求 correlationId:{} 和响应 correlationId: {} 内容不匹配！",
-                    requestHeader.correlationId(), responseHeader.correlationId());
-            return null;
-        }
-        return responseHeader;
+    public KafkaProtocolParsedMessage getParsedRequestMessage() {
+        return protocolContext.getParamAs(getCommonData().getAcknowledgementNumber(), KafkaProtocolParsedMessage.class);
     }
 
 
-    /**
-     *  解析响应数据包 payload 内容
-     * @param buffer 响应数据包
-     * @param requestHeader  响应数据包对应的请求数据包请求头信息
-     * @return 返回解析后的响应数据包 payload 内容
-     */
-    private ApiMessage parseResponsePayload(ByteBuffer buffer, RequestHeader requestHeader) {
+    @Override
+    protected ApiMessage parseBody(ResponseHeaderData header, ByteBuffer buffer) {
+        RequestHeader requestHeader = this.getRequestHeaderByResponseAckId();
         if (requestHeader == null) {
             return null;
         }
@@ -170,39 +111,25 @@ public class KafkaResponseParser implements ResponseParser<ProtocolMessage, Kafk
             }
             responseMessage = response.data();
         } catch (Exception e) {
-            log.error("解析响应数据包 payload 出错:{} ", data.requestDesc(), e);
+            log.error("解析响应数据包 payload 出错:{} ", getCommonData().requestDesc(), e);
         }
         return responseMessage;
     }
 
 
-    /**
-     *  构建解析完成的响应消息内容
-     * @param responseHeader 解析的响应数据包 header 内容
-     * @param responseMessage 解析的响应数据包 payload 内容
-     * @return 返回解析的完整数据包内容
-     */
-    private KafkaProtocolParsedMessage buildParsedResponseMessage(ResponseHeaderData responseHeader, ApiMessage responseMessage) {
+    @Override
+    protected KafkaProtocolParsedMessage buildParsedMessage(ResponseHeaderData header, ApiMessage body) {
         KafkaProtocolParsedMessage kafkaProtocolParsedMessage = getParsedRequestMessage();
         if (kafkaProtocolParsedMessage == null) {
             return null;
         }
-        kafkaProtocolParsedMessage.setResponseHeader(responseHeader);
-        kafkaProtocolParsedMessage.setResponseMessage(responseMessage);
-        kafkaProtocolParsedMessage.setResponseLength(data.getLength());
+        kafkaProtocolParsedMessage.setResponseHeader(header);
+        kafkaProtocolParsedMessage.setResponseMessage(body);
+        kafkaProtocolParsedMessage.setResponseLength(getCommonData().getLength());
         kafkaProtocolParsedMessage.setParsedResponse(Boolean.TRUE);
         kafkaProtocolParsedMessage.setParseComplete(Boolean.TRUE);
         kafkaProtocolParsedMessage.setRequestData(Boolean.FALSE);
-        kafkaProtocolParsedMessage.setEndTime(this.responseParseStartTime);
+        kafkaProtocolParsedMessage.setEndTime(this.startParseTime);
         return kafkaProtocolParsedMessage;
-    }
-
-
-    /**
-     * 获取该响应数据包对应的请求数据包解析内容
-     * @return 返回包含当前响应数据包对应的请求数据包解析内容
-     */
-    public KafkaProtocolParsedMessage getParsedRequestMessage() {
-        return this.protocolContext.getParamAs(data.getAcknowledgementNumber(), KafkaProtocolParsedMessage.class);
     }
 }

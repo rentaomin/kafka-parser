@@ -4,15 +4,14 @@ package cn.rtm.kafkaParser.protocol.test;
 import cn.rtm.kafkaParser.protocol.*;
 import cn.rtm.kafkaParser.protocol.consumer.KafkaDataParseExtractConsumer;
 import cn.rtm.kafkaParser.protocol.exception.ProtocolParseException;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
 import cn.rtm.kafkaParser.protocol.parser.DefaultProtocolContext;
-import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolHandler;
 import cn.rtm.kafkaParser.protocol.parser.req.KafkaRequestParser;
-import cn.rtm.kafkaParser.protocol.parser.req.RequestParser;
 import cn.rtm.kafkaParser.protocol.parser.res.KafkaResponseParser;
-import cn.rtm.kafkaParser.protocol.parser.res.ResponseParser;
 import org.pcap4j.core.*;
 import org.pcap4j.packet.Packet;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -79,11 +78,11 @@ public class KafkaParser {
     private ProtocolHandler getProtocolParseCoordinator() {
         PacketCombiner<ProtocolMessage> packetCombiner = new TcpPacketCombiner();
         ProtocolContext protocolContext = new DefaultProtocolContext();
-        RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser = new KafkaRequestParser(protocolContext);
-        ResponseParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser = new KafkaResponseParser(protocolContext);
+        ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> requestParser = new KafkaRequestParser(protocolContext);
+        ProtocolParser<ProtocolMessage, KafkaProtocolParsedMessage> responseParser = new KafkaResponseParser(protocolContext);
         DataParseExtractConsumer<List<ProtocolParseData>> kafkaDataParseExtractConsumer = new KafkaDataParseExtractConsumer();
         ProtocolHandler<Packet, KafkaProtocolParsedMessage> protocolHandler = new KafkaProtocolHandler(packetCombiner,requestParser,
-                responseParser,kafkaDataParseExtractConsumer);
+                responseParser,kafkaDataParseExtractConsumer, Arrays.asList(9094));
         return protocolHandler;
     }
 

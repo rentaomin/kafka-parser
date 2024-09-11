@@ -2,17 +2,13 @@ package cn.rtm.kafkaParser.protocol;
 
 import cn.rtm.kafkaParser.protocol.util.ByteUtils;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 
 /**
  *  提供请求和响应数据包公共内容包装类
  */
 public class ProtocolMessage {
-
-    // 默认 kafka 监听端口
-    private static final int LISTEN_PORT = 9094;
-
-    private  static final String slash = "=>";
 
     private String srcIp;
 
@@ -35,6 +31,11 @@ public class ProtocolMessage {
      *  kafka 协议原始数据
      */
     private byte[] rawData;
+
+    /**
+     *  默认协议监听端口，指定需要解析监听的协议端口
+     */
+    private List<Integer> listenPorts;
 
     public ProtocolMessage(String srcIp, int srcPort, String destIp, int destPort,
               long sequenceNumber, long acknowledgementNumber, byte[] rawData) {
@@ -119,6 +120,14 @@ public class ProtocolMessage {
     }
 
 
+    public List<Integer> getListenPorts() {
+        return listenPorts;
+    }
+
+    public void setListenPorts(List<Integer> listenPorts) {
+        this.listenPorts = listenPorts;
+    }
+
     /**
      *  不包含数据包长度内容的数据包信息
      * @return
@@ -161,7 +170,7 @@ public class ProtocolMessage {
      * @return 返回 true 则是，反之 false
      */
     public boolean isRequestPacket() {
-        return this.destPort == LISTEN_PORT;
+        return this.listenPorts.contains(this.destPort);
     }
 
 
@@ -170,24 +179,28 @@ public class ProtocolMessage {
      * @return 返回 true 则是，反之 false
      */
     public boolean isResponsePacket() {
-        return this.srcPort == LISTEN_PORT;
+        return this.listenPorts.contains(this.srcPort);
     }
 
+
     /**
-     * 是否为 kafka 协议包
+     * 是否为需要解析的目标协议包，即非空数据包且为请求数据包或响应数据包
      * @return 返回 true 则是，反之false
      */
-    public boolean isKafkaPacket() {
-        return ( isNotEmptyPacket()|| isRequestPacket()
-                || isResponsePacket() );
+    public boolean isTargetPacket() {
+        if (isEmptyPacket()) {
+            return false;
+        }
+        return isRequestPacket() || isResponsePacket();
     }
+
 
     /**
      *  是否为空数据包
      * @return 返回 true 则是，反之 false
      */
-    public boolean isNotEmptyPacket() {
-        return this.rawData.length > 0;
+    public boolean isEmptyPacket() {
+        return this.rawData.length == 0;
     }
 
 
@@ -229,4 +242,17 @@ public class ProtocolMessage {
         return this.srcIp + ":" +this.srcPort + " <-> " + this.destIp + ":" + this.destPort;
     }
 
+    @Override
+    public String toString() {
+        return "ProtocolMessage{" +
+                "srcIp='" + srcIp + '\'' +
+                ", srcPort=" + srcPort +
+                ", destIp='" + destIp + '\'' +
+                ", destPort=" + destPort +
+                ", sequenceNumber=" + sequenceNumber +
+                ", acknowledgementNumber=" + acknowledgementNumber +
+                ", length=" + length +
+                ", listenPorts=" + listenPorts +
+                '}';
+    }
 }

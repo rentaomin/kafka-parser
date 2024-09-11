@@ -1,18 +1,14 @@
 package cn.rtm.kafkaParser.protocol.parser.req;
 
-import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
-import cn.rtm.kafkaParser.protocol.ProtocolMessage;
 import cn.rtm.kafkaParser.protocol.ProtocolContext;
+import cn.rtm.kafkaParser.protocol.enums.ProtocolType;
+import cn.rtm.kafkaParser.protocol.handler.KafkaProtocolParsedMessage;
+import cn.rtm.kafkaParser.protocol.parser.AbstractProtocolParser;
 import org.apache.kafka.common.protocol.ApiKeys;
 import org.apache.kafka.common.protocol.ApiMessage;
 import org.apache.kafka.common.requests.AbstractRequest;
 import org.apache.kafka.common.requests.RequestHeader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import static org.apache.kafka.common.protocol.ApiKeys.API_VERSIONS;
 
 /**
@@ -20,112 +16,51 @@ import static org.apache.kafka.common.protocol.ApiKeys.API_VERSIONS;
  *  造轮子，且可保证与官方 api 同步更新支持，可无需关心版本兼容问题
  *
  *  <ul>
- *  <li> 方法 {@linkplain #parseRequest(ByteBuffer)} 实现 Kafka 请求数据包的解析,
  *  <li> 请求数据包内容格式为： RequestMessage =》 Size RequestHeader RequestPayload
- *  <li> 方法 {@linkplain #parseRequestHeader(ByteBuffer)} 实现 RequestHeader 解析，具体实现
+ *  <li> 方法 {@linkplain #parseHeader(ByteBuffer)} 实现 RequestHeader 解析，具体实现
  *  委托 Kafka-client 源码 {@linkplain RequestHeader#parse(ByteBuffer)} 执行真正的解析
- *  <li> 方法 {@linkplain #parseRequestPayload(ByteBuffer, RequestHeader)} 实现 RequestPayload 解析，具体实现
+ *  <li> 方法 {@linkplain #parseBody(RequestHeader, ByteBuffer)} 实现 RequestPayload 解析，具体实现
  *  委托 Kafka-client 源码 {@linkplain AbstractRequest#parseRequest(ApiKeys, short, ByteBuffer)} 执行真正的解析
- *  <li> 方法 {@linkplain #buildParsedRequestMessage(RequestHeader, ApiMessage)} 实现请求数据包解析结果的组装
+ *  <li> 方法 {@linkplain #buildParsedMessage(RequestHeader, ApiMessage)} 实现请求数据包解析结果的组装
  *  </ul>
  */
-public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaProtocolParsedMessage> {
+public class KafkaRequestParser extends AbstractProtocolParser<RequestHeader, ApiMessage, KafkaProtocolParsedMessage> {
 
-    private Logger log = LoggerFactory.getLogger(getClass());
-
-    /**
-     *  捕获的协议原始数据内容，包含公共通信信息
-     */
-    private ProtocolMessage data;
-
-    /**
-     *  协议上下文，负责实现请求-响应数据包数据传递
-     */
-    private ProtocolContext protocolContext;
-
-    /**
-     *  请求数据包解析包开始时间
-     */
-    private LocalDateTime requestStartParseTime;
 
     public KafkaRequestParser(ProtocolContext protocolContext) {
-        this.protocolContext = protocolContext;
+        super(protocolContext);
     }
 
     @Override
-    public KafkaProtocolParsedMessage parse(ProtocolMessage packet) {
-        this.init(packet);
-
-        ByteBuffer buffer = packet.rawDataWithNoLength();
-        if (packet.isRequestPacket()) {
-           return this.parseRequest(buffer);
+    protected RequestHeader parseHeader(ByteBuffer buffer) {
+        if (!isRequestPacket()) {
+            return null;
         }
-        return null;
-    }
-
-
-    /**
-     * 请求数据包解析初始化
-     * @param packet 请求数据包
-     */
-    public void init(ProtocolMessage packet) {
-        this.data = packet;
-        this.requestStartParseTime = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
-    }
-
-
-    /**
-     *  解析请求数据包内容
-     * @param buffer 请求数据包
-     * @return 返回解析后的请求数据包内容
-     */
-    private KafkaProtocolParsedMessage parseRequest(ByteBuffer buffer) {
-
-        RequestHeader header = this.parseRequestHeader(buffer);
-
-        ApiMessage payload = this.parseRequestPayload(buffer, header);
-
-        return this.buildParsedRequestMessage(header,payload);
-    }
-
-
-    /**
-     *  解析请求头数据包内容
-     * @param buffer 请求数据包中请求头数据包
-     * @return 返回解析后的请求头数据包内容
-     */
-    private RequestHeader parseRequestHeader(ByteBuffer buffer) {
-
         RequestHeader header = null;
         try {
             header = RequestHeader.parse(buffer);
         } catch (Exception e) {
-            log.error("解析:{} 请求头出错！",data.requestDesc(),e);
+            log.error("解析:{} 请求头出错！",getCommonData().requestDesc(),e);
         }
         return header;
     }
 
 
-    /**
-     *  解析请求数据包 payload 内容
-     * @param buffer 请求数据包 payload 内容
-     * @param header 解析完成的请求头信息
-     * @return 返回解析完成的请求 payload 内容
-     */
-    private ApiMessage parseRequestPayload(ByteBuffer buffer, RequestHeader header) {
-        if (header == null || isUnsupportedApiVersionsRequest(header)) {
+    @Override
+    protected ApiMessage parseBody(RequestHeader parsedHeader, ByteBuffer buffer) {
+        if (parsedHeader == null || isUnsupportedApiVersionsRequest(parsedHeader)) {
             return null;
         }
-        ApiKeys apiKey = header.apiKey();
-        short apiVersion = header.apiVersion();
+        ApiKeys apiKey = parsedHeader.apiKey();
+        short apiVersion = parsedHeader.apiVersion();
         ApiMessage apiMessage = null;
         try {
             apiMessage = AbstractRequest.parseRequest(apiKey, apiVersion, buffer).request.data();
         } catch (Exception e) {
             log.error("Error getting request for apiKey: " + apiKey +
-                    ", apiVersion: " + header.apiVersion() +
-                    ", connectionId: " + header.clientId() +
-                    ", listenerName: " + header.apiKey(), e);
+                    ", apiVersion: " + parsedHeader.apiVersion() +
+                    ", connectionId: " + parsedHeader.clientId() +
+                    ", listenerName: " + parsedHeader.apiKey(), e);
         }
         return apiMessage;
     }
@@ -141,26 +76,21 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
     }
 
 
-    /**
-     *  构建解析完成的请求内容
-     * @param header 解析的请求头内容
-     * @param payload 解析的请求 payload 内容
-     * @return 返回解析完成的请求数据包内容
-     */
-    private KafkaProtocolParsedMessage buildParsedRequestMessage(RequestHeader header, ApiMessage payload) {
+    @Override
+    protected KafkaProtocolParsedMessage buildParsedMessage(RequestHeader header, ApiMessage body) {
         if (header == null) {
             return null;
         }
         KafkaProtocolParsedMessage kafkaProtocolParsedMessage = new KafkaProtocolParsedMessage();
         kafkaProtocolParsedMessage.setRequestHeader(header);
-        kafkaProtocolParsedMessage.setRequestMessage(payload);
-        kafkaProtocolParsedMessage.setRequestLength(data.getLength());
-        kafkaProtocolParsedMessage.setOriginData(data);
+        kafkaProtocolParsedMessage.setRequestMessage(body);
+        kafkaProtocolParsedMessage.setRequestLength(getCommonData().getLength());
+        kafkaProtocolParsedMessage.setOriginData(getCommonData());
         kafkaProtocolParsedMessage.setRequestApi(buildRequestApi(header));
         kafkaProtocolParsedMessage.setRequestData(Boolean.TRUE);
         kafkaProtocolParsedMessage.setParsedRequest(Boolean.TRUE);
-        kafkaProtocolParsedMessage.setStartTime(this.requestStartParseTime);
-        protocolContext.addParam(data.getResponseAckId(), kafkaProtocolParsedMessage);
+        kafkaProtocolParsedMessage.setStartTime(this.startParseTime);
+        protocolContext.addParam(getCommonData().getResponseAckId(), kafkaProtocolParsedMessage);
         return kafkaProtocolParsedMessage;
     }
 
@@ -174,7 +104,7 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
         StringBuilder apiInfo = new StringBuilder(32);
         ApiKeys apiKeys = header.apiKey();
         String slash = " ";
-        apiInfo.append("Kafka");
+        apiInfo.append(ProtocolType.KAFKA.getName());
         apiInfo.append(slash);
         apiInfo.append(apiKeys.name);
         apiInfo.append("(");
@@ -185,7 +115,7 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
         apiInfo.append(header.data().requestApiVersion());
         apiInfo.append(slash);
         apiInfo.append("Api Request =>{ ");
-        apiInfo.append(data.getRequestUrl());
+        apiInfo.append(getCommonData().getRequestUrl());
         apiInfo.append(slash);
         apiInfo.append("Header-Version=");
         apiInfo.append("v");
@@ -196,6 +126,4 @@ public class KafkaRequestParser implements RequestParser<ProtocolMessage, KafkaP
         apiInfo.append(slash);
         return apiInfo.toString();
     }
-
-
 }
